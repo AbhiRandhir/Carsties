@@ -1,5 +1,6 @@
 using System;
 using AuctionService.Entities;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuctionService.Data;
@@ -11,4 +12,15 @@ public class AuctionDbContext : DbContext
     }
 
     public DbSet<Auction> Auctions { get; set; }
+
+    //Start - Section 4 RabbitMQ
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
+    }
+    //End - Section 4 RabbitMQ
 }

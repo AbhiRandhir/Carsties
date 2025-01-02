@@ -5,6 +5,8 @@ using AuctionService.Entities;
 using AuctoionService.DTOs;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Contracts;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,11 +18,13 @@ public class AuctionController : ControllerBase
 {
     private readonly AuctionDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IPublishEndpoint _publishEndpoint;
 
-    public AuctionController(AuctionDbContext Context, IMapper mapper)
+    public AuctionController(AuctionDbContext Context, IMapper mapper, IPublishEndpoint publishEndpoint)
     {
         _context = Context;
         _mapper = mapper;
+        _publishEndpoint = publishEndpoint;
     }
     
     [HttpGet]
@@ -60,6 +64,11 @@ public class AuctionController : ControllerBase
 
         _context.Auctions.Add(auction);
 
+        var newAuction = _mapper.Map<AuctionDto>(auction);
+
+        await _publishEndpoint.Publish(_mapper.Map<AuctionCreated>(newAuction));
+        //Before any failed then not going to save in database 
+        //If the service is down then the whole transaction fails
         var result = await _context.SaveChangesAsync() > 0;
 
         if(!result) return BadRequest("Could not save changes to database");
@@ -86,12 +95,14 @@ public class AuctionController : ControllerBase
         auction.Item.Year = updateAuctionDto.Year ?? auction.Item.Year;
         auction.Item.Mileage = updateAuctionDto.Mileage ?? auction.Item.Mileage;
 
+        await _publishEndpoint.Publish(_mapper.Map<AuctionUpdated>(auction));
+
         var result = await _context.SaveChangesAsync() > 0;
 
         if(!result) 
-            return BadRequest("Could not save changes to database");
+            return Ok();
 
-        return NoContent();
+        return BadRequest("Could not save changes to database");     
     }
 
     [HttpDelete("{id}")]
@@ -104,6 +115,10 @@ public class AuctionController : ControllerBase
         //TODO: check seller = username
 
         _context.Auctions.Remove(auction);
+
+        //Start - Challenge
+        await _publishEndpoint.Publish<AuctionDeleted>(new { Id = auction.Id.ToString() }); 
+        //End - Challenge
 
         var result = await _context.SaveChangesAsync() > 0;
 
