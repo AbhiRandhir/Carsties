@@ -1,6 +1,7 @@
 using AuctionService.Consumers;
 using AuctionService.Data;
 using MassTransit;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,11 +37,26 @@ builder.Services.AddMassTransit(x =>
 });
 //End - Section 4 RabbitMQ
 
+//Start - Section 5 Identity Service
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = builder.Configuration["IdentityServiceUrl"];
+        options.RequireHttpsMetadata = false;
+        options.TokenValidationParameters.ValidateAudience = false;
+        options.TokenValidationParameters.NameClaimType = "username";
+    });
+//End - Section 5 Identity Service
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 
-app.UseAuthorization();
+//Start - Section 5 Identity Service
+app.UseAuthentication();
+//End - Section 5 Identity Service
+
+app.UseAuthorization(); // Use for Identity Service
 
 app.MapControllers();
 

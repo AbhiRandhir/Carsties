@@ -7,6 +7,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Contracts;
 using MassTransit;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -55,12 +56,15 @@ public class AuctionController : ControllerBase
         return _mapper.Map<AuctionDto>(auction);
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<AuctionDto>> CreateAuction(CreateAuctionDto createAuctionDto)
     {
         var auction = _mapper.Map<Auction>(createAuctionDto);
         // TODO: Add current user as seller
-        auction.Seller = "test";
+        //Start - Section 5 Identity Server 
+        auction.Seller = User.Identity.Name;
+        //End - Section 5 Identity Server 
 
         _context.Auctions.Add(auction);
 
@@ -77,6 +81,7 @@ public class AuctionController : ControllerBase
         return CreatedAtAction(nameof(GetAuctionById), new { auction.Id }, _mapper.Map<AuctionDto>(auction));
     }
 
+    [Authorize]
     [HttpPut("{id}")]
     public async Task<ActionResult> UpdateAuction(Guid id, UpdateAuctionDto updateAuctionDto)
     {
@@ -88,6 +93,12 @@ public class AuctionController : ControllerBase
             return NotFound();
         
         //TODO: check seller = username
+        //Start - Section 5 Identity Server 
+            if (auction.Seller != User.Identity.Name)
+                return Forbid(); 
+                //Forbidden Status code 
+                // Showing HTTP 403 Status code response 
+        //Start - Section 5 Identity Server 
 
         auction.Item.Make = updateAuctionDto.Make ?? auction.Item.Make;
         auction.Item.Model = updateAuctionDto.Model ?? auction.Item.Model;
@@ -99,12 +110,13 @@ public class AuctionController : ControllerBase
 
         var result = await _context.SaveChangesAsync() > 0;
 
-        if(!result) 
+        if(result) 
             return Ok();
 
         return BadRequest("Could not save changes to database");     
     }
 
+    [Authorize]
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteAuction(Guid id)
     {
@@ -113,6 +125,11 @@ public class AuctionController : ControllerBase
         if(auction == null)
             return NotFound();
         //TODO: check seller = username
+        //Start - Section 5 Identity Server 
+            if (auction.Seller != User.Identity.Name)
+                return Forbid();
+                
+        //Start - Section 5 Identity Server 
 
         _context.Auctions.Remove(auction);
 
