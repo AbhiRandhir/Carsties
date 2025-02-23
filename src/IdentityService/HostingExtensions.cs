@@ -29,6 +29,13 @@ internal static class HostingExtensions
                 options.Events.RaiseFailureEvents = true;
                 options.Events.RaiseSuccessEvents = true;
 
+                //Start - Section 7 Dockerizing
+                if(builder.Environment.IsEnvironment("Docker"))
+                {
+                    options.IssuerUri = "http://localhost:5001";
+                }
+                //End - Section 7 Dockerizing 
+
                 // see https://docs.duendesoftware.com/identityserver/v6/fundamentals/resources/
                 //options.EmitStaticAudienceClaim = true;
                 //Start - Section Indentity - We don't use now for this

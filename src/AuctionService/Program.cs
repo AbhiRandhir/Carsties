@@ -32,6 +32,13 @@ builder.Services.AddMassTransit(x =>
 
     x.UsingRabbitMq((context, cfg) => 
     {
+        //Start - Section 7 Dockerizing
+            cfg.Host(builder.Configuration["RabbitMq:Host"], "/", host => 
+            {
+                host.Username(builder.Configuration.GetValue("RabbitMq:Username", "guest"));
+                host.Password(builder.Configuration.GetValue("RabbitMq:Password", "guest"));
+            }); 
+        //End - Section 7 Dockerizing
         cfg.ConfigureEndpoints(context);
     });
 });
